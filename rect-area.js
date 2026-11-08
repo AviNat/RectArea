@@ -3,7 +3,7 @@
  * No part of this file may be copied, modified or distributed without the written permission of the copyright holder.
  */
 /*
- * RectArea (version 1.3.0 - RectArea.version)
+ * RectArea (version 1.4.0 - RectArea.version)
  * Drawing of right-angled polygons for area / perimeter questions in Moodle Formulas.
  * Presentation only: the question calculates and checks the answers and gives their feedback.
  *
@@ -26,13 +26,17 @@
  *   helper:    "none"     - no slider
  *              "divide"   - slider shows the ways to divide, no numbers
  *              "dims"     - as divide, plus the sides of every rectangle
+ *              "calc"     - as dims, plus the full calculation: A: 2 · 3 = 6 ... and 6 + 50 = 56
+ *                           (big rectangle minus missing parts: 8 · 7 = 56 ... and 56 − 2 − 3 = 51).
+ *   times:     "·"  the multiplication sign (e.g. "×" instead)
+ *                           It gives the answer away, so use it in feedback mode.
  *
  *   Feedback mode - the same diagram changes after the answer is submitted:
  *   answer:    "part1-123456"  id(s) of the answer fields (or of an element around them), e.g.
  *              "part1-{mb},part2-{mb}" in the snippet; {mb} keeps the ids of questions on one page apart.
  *              Submitted = every field found is read-only (or disabled).
- *   feedback:  the options that change after submitting, e.g. {helper:"dims", revealHidden:true, startView:1};
- *              true = {helper:"dims", revealHidden:true}; not given = no change.
+ *   feedback:  the options that change after submitting, e.g. {helper:"calc", revealHidden:true, startView:1};
+ *              true = {helper:"calc", revealHidden:true}; not given = no change.
  *   submitted: true / false forces the state (for testing).
  *   lang:      "en" | "he" | "ar"   texts: { key: "own text" } overrides
  *   width:     420  (px, largest size of the drawing)
@@ -50,9 +54,9 @@
 (function (root) {
 "use strict";
 
-var VERSION = "1.3.0";
+var VERSION = "1.4.0";
 var EPS = 1e-7;
-var TIMES = "×";
+var MINUS = "−";
 var PALETTE = ["#4e79a7", "#f28e2b", "#59a14f", "#b07aa1", "#76b7b2", "#edc948", "#e15759", "#9c755f"];
 var HIDDEN_COLOR = "#2b4fd8";
 
@@ -470,6 +474,7 @@ function addStyle() {
         ".ra-cap{margin-top:4px;font-weight:bold}" +
         ".ra-line{margin-top:1px}" +
         ".ra-math{direction:ltr;unicode-bidi:isolate}" +
+        ".ra-total{margin-top:4px;padding-top:3px;border-top:1px solid #bbb;font-weight:bold}" +
         ".ra-err{display:inline-block;border:1px solid #c0392b;background:#fdecea;color:#7b1d14;padding:8px 12px;" +
         "font-family:Arial,Helvetica,sans-serif;font-size:14px}" +
         ".ra-err ul{margin:4px 0 0;padding-inline-start:20px}";
@@ -527,7 +532,7 @@ function isSubmitted(ids) {
     return true;
 }
 
-var DETAILED_FEEDBACK = { helper: "dims", revealHidden: true };
+var DETAILED_FEEDBACK = { helper: "calc", revealHidden: true };
 
 // The options in effect: after submitting, config.feedback replaces the options it names.
 function effectiveConfig(config, submitted) {
@@ -586,7 +591,9 @@ function draw(host, config) {
     if (model.warnings.length && typeof console !== "undefined") console.warn("RectArea: " + model.warnings.join(" "));
 
     var mode = config.helper || "none";
-    var showDims = mode === "dims";
+    var TIMES = config.times || "·";      // multiplication sign of 7th grade (\cdot)
+    var showCalc = mode === "calc";
+    var showDims = mode === "dims" || showCalc;
     var reveal = !!config.revealHidden;
     var uid = "ra" + (++instanceCount);
 
@@ -724,20 +731,33 @@ function draw(host, config) {
         clear(panel);
         if (!view) { cap.textContent = T.hint; return; }
         var head = tx("way", { k: k, n: views.length }) + ": ";
+        // "2 × 3" or, with calc, "2 × 3 = 6"
+        function product(r) { return fmt(r.w) + " " + TIMES + " " + fmt(r.h) + (showCalc ? " = " + fmt(r.area) : ""); }
         if (view.kind === "subtract") {
             cap.textContent = head + T.subtract;
             var o2 = view.outer;
             if (showDims) {
-                line(panel, T.bigRect, fmt(o2.w) + " " + TIMES + " " + fmt(o2.h));
+                line(panel, T.bigRect, product(o2));
                 view.holes.forEach(function (r, i) {
-                    line(panel, L(i) + " (" + T.missing + ")", fmt(r.w) + " " + TIMES + " " + fmt(r.h));
+                    line(panel, L(i) + " (" + T.missing + ")", product(r));
                 });
+            }
+            if (showCalc) {
+                var rest = o2.area;
+                view.holes.forEach(function (r) { rest = rnd(rest - r.area); });
+                line(panel, "", fmt(o2.area) + " " + view.holes.map(function (r) { return MINUS + " " + fmt(r.area); }).join(" ") +
+                     " = " + fmt(rest), "ra-total");
             }
         } else {
             cap.textContent = head + (view.kind === "single" ? T.single : T[view.kind] + " - " + rectsText(view.rects.length));
             if (showDims) view.rects.forEach(function (r, i) {
-                line(panel, L(i), fmt(r.w) + " " + TIMES + " " + fmt(r.h));
+                line(panel, L(i), product(r));
             });
+            if (showCalc && view.rects.length > 1) {
+                var sum = 0;
+                view.rects.forEach(function (r) { sum = rnd(sum + r.area); });
+                line(panel, "", view.rects.map(function (r) { return fmt(r.area); }).join(" + ") + " = " + fmt(sum), "ra-total");
+            }
         }
     }
 

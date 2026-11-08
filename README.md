@@ -2,7 +2,7 @@
 
 Drawing for area and perimeter questions in Moodle **Formulas**. The shape is a polygon with right angles only, inside a rectangle with sides of 8 to 12 units.
 
-The library only draws. The question calculates and checks the answers and gives the feedback on them.
+The library only draws. The question calculates and checks the answers and gives the feedback on them. The one exception is helper `"calc"`, which in feedback mode shows the area calculation for the division on the slider.
 
 | File | What it is |
 |---|---|
@@ -28,9 +28,10 @@ The library stops with a clear message when a step is diagonal, a step has lengt
 | `hide` | none | `[3,6]` draws edges 3 and 6 with no length. `{3:"a",6:"b"}` shows a label instead. Hide at most one horizontal and one vertical edge. |
 | `revealHidden` | `false` | Draws the hidden edges in blue, with their length. |
 | `answer` | none | Ids of the answer fields, e.g. `"part1-{mb},part2-{mb}"`. The id can also be on an element around the field. When every field found is read-only (or disabled), the answer was submitted and the diagram switches to feedback mode. |
-| `feedback` | none | The options that change in feedback mode, e.g. `{helper:"dims", revealHidden:true, startView:1}`. `true` means `{helper:"dims", revealHidden:true}`. Without it, nothing changes after submitting. |
+| `feedback` | none | The options that change in feedback mode, e.g. `{helper:"calc", revealHidden:true, startView:1}`. `true` means `{helper:"calc", revealHidden:true}`. Without it, nothing changes after submitting. |
 | `submitted` | from `answer` | `true` or `false` forces the state, for testing. |
-| `helper` | `"none"` | `"divide"`: a slider shows the ways to divide, with no numbers. `"dims"`: also the sides of each rectangle. |
+| `helper` | `"none"` | `"divide"`: a slider shows the ways to divide, with no numbers. `"dims"`: also the sides of each rectangle. `"calc"`: also the full calculation, e.g. `A: 2 · 3 = 6`, `B: 5 · 10 = 50`, `6 + 50 = 56` (for the last position: `8 · 7 = 56` … `56 − 2 − 3 = 51`). It gives the answer away, so use it in `feedback`. |
+| `times` | `"·"` | The multiplication sign, as taught in 7th grade. `"×"` if you prefer. |
 | `lang` | `"en"` | `"he"` for Hebrew, `"ar"` for Arabic (both right to left). `texts: {key: "..."}` replaces single texts. |
 | `width` | `420` | Largest size of the drawing, in px. |
 | `grid` | `false` | Unit grid behind the shape. |
