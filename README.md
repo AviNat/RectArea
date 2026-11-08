@@ -26,7 +26,10 @@ The library stops with a clear message when a step is diagonal, a step has lengt
 |---|---|---|
 | `steps` | – | `[[dx,dy], ...]` |
 | `hide` | none | `[3,6]` draws edges 3 and 6 with no length. `{3:"a",6:"b"}` shows a label instead. Hide at most one horizontal and one vertical edge. |
-| `revealHidden` | `false` | Draws the hidden edges in blue, with their length. Meant for the feedback snippet. |
+| `revealHidden` | `false` | Draws the hidden edges in blue, with their length. |
+| `answer` | none | Ids of the answer fields, e.g. `"part1-{mb},part2-{mb}"`. The id can also be on an element around the field. When every field found is read-only (or disabled), the answer was submitted and the diagram switches to feedback mode. |
+| `feedback` | none | The options that change in feedback mode, e.g. `{helper:"dims", revealHidden:true, startView:1}`. `true` means `{helper:"dims", revealHidden:true}`. Without it, nothing changes after submitting. |
+| `submitted` | from `answer` | `true` or `false` forces the state, for testing. |
 | `helper` | `"none"` | `"divide"`: a slider shows the ways to divide, with no numbers. `"dims"`: also the sides of each rectangle. |
 | `lang` | `"en"` | `"he"` for Hebrew, `"ar"` for Arabic (both right to left). `texts: {key: "..."}` replaces single texts. |
 | `width` | `420` | Largest size of the drawing, in px. |
@@ -46,8 +49,10 @@ The rectangles get new letters in every way: A, B in the first way, C, D in the 
 ## In Moodle Formulas
 
 1. Put the random variables and the global variables in Formulas. The demo gives both for every template. `A` is the area and `P` the perimeter. Use them as the answers of the parts; their feedback is your own.
-2. Paste the question snippet into the question text, in the HTML (source) view, as **one line**.
-3. To show the drawing again in the feedback, for example with `helper:"dims"` and `revealHidden:true`, paste the feedback snippet where the feedback should appear.
+2. Paste the snippet into the question text, in the HTML (source) view, as **one line**.
+3. Feedback mode is part of the same diagram. Set `answer` to the ids of the answer fields, made unique with the question's random variable `mb` (`part1-{mb}` becomes `part1-123456`). Set `feedback` to the options for after submitting.
+
+Several diagrams on one page work. Each snippet draws where it stands, the library loads once, and the questions' `mb` keeps their answer ids apart. `rect-area-multi-test.html` tests four questions on one page, submitted and not.
 
 What the snippet looks like:
 

@@ -70,15 +70,19 @@
         <option value="divide">divide - slider shows the ways, no numbers</option>
         <option value="dims">dims - slider and the sides of each rectangle</option>
       </select>
-      <label class="inline" style="margin-top:8px"><input id="fb" type="checkbox" checked> feedback snippet</label>
-      <div class="row" id="fbOpts">
-        <div><label for="fbHelper">Helper in the feedback</label>
-          <select id="fbHelper">
-            <option value="none">none</option>
-            <option value="divide">divide</option>
-            <option value="dims" selected>dims</option>
-          </select></div>
-        <div><label class="inline" style="margin-bottom:8px"><input id="reveal" type="checkbox" checked> hidden edges in blue, with length</label></div>
+      <label class="inline" style="margin-top:8px"><input id="fb" type="checkbox" checked> feedback mode after the answer is submitted</label>
+      <div id="fbOpts">
+        <label for="answer">Answer field ids (read-only = submitted)</label>
+        <input id="answer" type="text" value="part1-{mb},part2-{mb}">
+        <div class="row">
+          <div><label for="fbHelper">Helper after submitting</label>
+            <select id="fbHelper">
+              <option value="none">none</option>
+              <option value="divide">divide</option>
+              <option value="dims" selected>dims</option>
+            </select></div>
+          <div><label class="inline" style="margin-bottom:8px"><input id="reveal" type="checkbox" checked> hidden edges in blue, with length</label></div>
+        </div>
       </div>
       <div class="row">
         <div><label for="lang">Language</label>
@@ -103,8 +107,8 @@
     <div class="card">
       <h2>Preview (runs the Moodle snippet)</h2>
       <div class="previews">
-        <div><h3>Question text</h3><div id="pvQ"></div></div>
-        <div id="pvFWrap"><h3>Feedback</h3><div id="pvF"></div></div>
+        <div><h3>While answering</h3><div id="pvQ"></div></div>
+        <div id="pvFWrap"><h3>After submitting (fields read-only)</h3><div id="pvF"></div></div>
       </div>
     </div>
     <div class="card">
@@ -117,13 +121,11 @@
         <div><label for="fRand">Random variables</label><textarea id="fRand" rows="6" readonly></textarea></div>
         <div><label for="fGlob">Global variables (A = area, P = perimeter)</label><textarea id="fGlob" rows="6" readonly></textarea></div>
       </div>
-      <p class="hint">Use A and P as the answers of the parts; their feedback is part of the question. Paste each snippet as one line, in the HTML (source) view of the editor.</p>
+      <p class="hint">Use A and P as the answers of the parts; their feedback is part of the question.
+        <code>mb</code> is the question's own random variable that keeps the ids apart (part1-{mb} becomes part1-123456).
+        Paste the snippet as one line, in the HTML (source) view of the question text.</p>
       <div class="snip"><span>Question text snippet</span><button class="ghost" type="button" data-copy="sQ">Copy</button></div>
-      <textarea id="sQ" rows="4" readonly></textarea>
-      <div id="sFWrap">
-        <div class="snip"><span>General feedback snippet</span><button class="ghost" type="button" data-copy="sF">Copy</button></div>
-        <textarea id="sF" rows="4" readonly></textarea>
-      </div>
+      <textarea id="sQ" rows="5" readonly></textarea>
     </div>
   </div>
 </main>
@@ -183,12 +185,19 @@ function hideText() {
     return "{" + nums.map(function (n, i) { return n + ":\"" + "abcdefgh".charAt(i) + "\""; }).join(",") + "}";
 }
 
-function cfgText(helper, preview, feedback) {
+// preview: false = the snippet for Moodle; true = demo preview, with submitted = the state to show
+function cfgText(preview, submitted) {
     var parts = ["steps:" + stepsSource()];
-    var h = hideText();
+    var h = hideText(), helper = $("helper").value;
     if (h) parts.push("hide:" + h);
-    if (h && feedback && $("reveal").checked) parts.push("revealHidden:true");
     if (helper !== "none") parts.push("helper:\"" + helper + "\"");
+    if ($("fb").checked) {
+        var ids = $("answer").value.trim(), fb = [];
+        if (ids) parts.push("answer:" + JSON.stringify(ids));
+        if ($("fbHelper").value !== helper) fb.push("helper:\"" + $("fbHelper").value + "\"");
+        if (h && $("reveal").checked) fb.push("revealHidden:true");
+        if (fb.length) parts.push("feedback:{" + fb.join(",") + "}");
+    }
     var lang = $("lang").value;
     if (lang === "multi") parts.push("lang:" + (preview ? "\"" + $("pvLang").value + "\"" : MULTILANG));
     else if (lang !== "en") parts.push("lang:\"" + lang + "\"");
@@ -197,6 +206,7 @@ function cfgText(helper, preview, feedback) {
     if ($("grid").checked) parts.push("grid:true");
     if (preview && $("nums").checked) parts.push("edgeNumbers:true");
     if (preview && startView) parts.push("startView:" + startView);     // demo.html?view=2&tpl=1
+    if (preview) parts.push("submitted:" + !!submitted);
     return "{" + parts.join(",") + "}";
 }
 
@@ -230,17 +240,18 @@ function row(name, value, cls) {
 }
 
 function update() {
-    var t = tpl(), helper = $("helper").value, fb = $("fb").checked, fbHelper = $("fbHelper").value;
+    var t = tpl(), fb = $("fb").checked;
     $("vals").textContent = t ? Object.keys(vals).map(function (k) { return k + " = " + vals[k]; }).join(",  ") : "";
     $("info").innerHTML = "";
 
-    var cfgQ = cfgText(helper, false, false), cfgF = cfgText(fbHelper, false, true);
-    var bad = /[<>&]/.test((snippetBody(cfgQ) + snippetBody(cfgF)).split(MULTILANG).join(""));
+    var cfgQ = cfgText(false);
+    var bad = /[<>&]/.test(snippetBody(cfgQ).split(MULTILANG).join(""));
+    var pvVals = { mb: 123456 };                       // as Formulas fills {mb}
+    Object.keys(vals).forEach(function (k) { pvVals[k] = vals[k]; });
 
-    // Snippets for Moodle (with the {name} placeholders)
+    // Snippet for Moodle (with the {name} placeholders)
     $("sQ").value = snippet(cfgQ);
-    $("sF").value = snippet(cfgF);
-    ["sFWrap", "pvFWrap", "fbOpts"].forEach(function (id) { $(id).style.display = fb ? "" : "none"; });
+    ["pvFWrap", "fbOpts"].forEach(function (id) { $(id).style.display = fb ? "" : "none"; });
     $("pvLangWrap").style.display = $("lang").value === "multi" ? "" : "none";
     var custom = !t, fixed = custom && $("steps").value.indexOf("{") < 0;
     if (t) {
@@ -254,8 +265,8 @@ function update() {
 
     // Preview: fill the values in, as Formulas does, and run the real snippet
     try {
-        runSnippet($("pvQ"), T.fill(snippetBody(cfgText(helper, true, false)), vals));
-        if (fb) runSnippet($("pvF"), T.fill(snippetBody(cfgText(fbHelper, true, true)), vals));
+        runSnippet($("pvQ"), T.fill(snippetBody(cfgText(true, false)), pvVals));
+        if (fb) runSnippet($("pvF"), T.fill(snippetBody(cfgText(true, true)), pvVals));
     } catch (err) {
         $("pvQ").textContent = "Snippet error: " + err.message;
     }
@@ -264,7 +275,7 @@ function update() {
     if (bad) row("Snippet", "contains < > or & - Moodle will break it. Remove them from the steps.", "bad");
     var model;
     try {
-        var cfg = Function("return " + T.fill(cfgText(helper, true, false), vals) + ";")();
+        var cfg = Function("return " + T.fill(cfgText(true, false), pvVals) + ";")();
         model = RA.analyse(cfg);
     } catch (err2) {
         row("Steps", "cannot be read: " + err2.message, "bad");
@@ -287,7 +298,7 @@ function update() {
 
 $("tpl").addEventListener("change", pickTemplate);
 $("again").addEventListener("click", function () { var t = tpl(); if (t) vals = T.randomValues(t); update(); });
-["steps", "hide", "width", "url"].forEach(function (id) { $(id).addEventListener("input", update); });
+["steps", "hide", "width", "url", "answer"].forEach(function (id) { $(id).addEventListener("input", update); });
 ["letters", "helper", "fb", "fbHelper", "reveal", "lang", "pvLang", "grid", "nums"].forEach(function (id) { $(id).addEventListener("change", update); });
 document.querySelectorAll("[data-copy]").forEach(function (b) {
     b.addEventListener("click", function () {

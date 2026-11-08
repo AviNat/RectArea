@@ -3,7 +3,7 @@
  * No part of this file may be copied, modified or distributed without the written permission of the copyright holder.
  */
 /*
- * RectArea (version 1.2.0 - RectArea.version)
+ * RectArea (version 1.3.0 - RectArea.version)
  * Drawing of right-angled polygons for area / perimeter questions in Moodle Formulas.
  * Presentation only: the question calculates and checks the answers and gives their feedback.
  *
@@ -12,7 +12,7 @@
  * not return to (0,0), the closing edge is added (it must be parallel to an axis).
  * Edges are numbered 1, 2, 3 ... in the order of the steps; the closing edge is last.
  *
- *   RectArea.render(target, config)  -> instance { model, show(k), element }
+ *   RectArea.render(target, config)  -> instance { model, show(k), element, submitted }
  *     target: element, element id, or the <script> element of the Moodle snippet
  *             (a <div> is then created just before the script).
  *   RectArea.analyse(config)         -> model { ok, errors, warnings, width, height,
@@ -22,10 +22,18 @@
  *   steps:     [[dx,dy], ...]   or "dx,dy dx,dy ..."   (path: "R5 D5 L2 D5 L3" also works)
  *   hide:      [3, 4]  edges drawn without their length   or  {3: "a", 4: "b"} (with a label)
  *              at most one horizontal and one vertical edge, so they can be found.
- *   revealHidden: false  true = hidden edges in blue with their length (for the feedback)
+ *   revealHidden: false  true = hidden edges in blue with their length
  *   helper:    "none"     - no slider
  *              "divide"   - slider shows the ways to divide, no numbers
  *              "dims"     - as divide, plus the sides of every rectangle
+ *
+ *   Feedback mode - the same diagram changes after the answer is submitted:
+ *   answer:    "part1-123456"  id(s) of the answer fields (or of an element around them), e.g.
+ *              "part1-{mb},part2-{mb}" in the snippet; {mb} keeps the ids of questions on one page apart.
+ *              Submitted = every field found is read-only (or disabled).
+ *   feedback:  the options that change after submitting, e.g. {helper:"dims", revealHidden:true, startView:1};
+ *              true = {helper:"dims", revealHidden:true}; not given = no change.
+ *   submitted: true / false forces the state (for testing).
  *   lang:      "en" | "he" | "ar"   texts: { key: "own text" } overrides
  *   width:     420  (px, largest size of the drawing)
  *   grid:      false  unit grid behind the shape
@@ -42,7 +50,7 @@
 (function (root) {
 "use strict";
 
-var VERSION = "1.2.0";
+var VERSION = "1.3.0";
 var EPS = 1e-7;
 var TIMES = "×";
 var PALETTE = ["#4e79a7", "#f28e2b", "#59a14f", "#b07aa1", "#76b7b2", "#edc948", "#e15759", "#9c755f"];
@@ -497,10 +505,58 @@ function resolveTarget(target) {
     return el;
 }
 
+/* ============================================================
+   Submitted or not: Moodle makes the answer fields read-only after
+   the answer is submitted (and in the review page).
+   ============================================================ */
+function answerFields(ids) {
+    var list = Array.isArray(ids) ? ids : String(ids || "").split(/[\s,;]+/), out = [];
+    list.forEach(function (id) {
+        if (!id) return;
+        var el = document.getElementById(String(id).trim());
+        if (!el) return;
+        if (/^(input|textarea|select)$/i.test(el.tagName)) out.push(el);
+        else Array.prototype.push.apply(out, el.querySelectorAll("input:not([type=hidden]),textarea,select"));
+    });
+    return out;
+}
+function isSubmitted(ids) {
+    var f = answerFields(ids);
+    if (!f.length) return false;
+    for (var i = 0; i < f.length; i++) if (!(f[i].readOnly || f[i].disabled)) return false;
+    return true;
+}
+
+var DETAILED_FEEDBACK = { helper: "dims", revealHidden: true };
+
+// The options in effect: after submitting, config.feedback replaces the options it names.
+function effectiveConfig(config, submitted) {
+    if (!submitted || !config.feedback) return config;
+    var fb = config.feedback === true ? DETAILED_FEEDBACK : config.feedback, out = {}, k;
+    for (k in config) if (Object.prototype.hasOwnProperty.call(config, k)) out[k] = config[k];
+    for (k in fb) if (Object.prototype.hasOwnProperty.call(fb, k)) out[k] = fb[k];
+    return out;
+}
+
 function render(target, config) {
     config = config || {};
     addStyle();
     var host = resolveTarget(target);
+    var inst = { element: host, submitted: false };
+    function paint() {
+        inst.submitted = config.submitted != null ? !!config.submitted : isSubmitted(config.answer);
+        var d = draw(host, effectiveConfig(config, inst.submitted));
+        inst.model = d.model; inst.show = d.show; inst.views = d.views; inst.box = d.element;
+    }
+    paint();
+    // The answer fields may stand after the drawing in the question text: look again when the page is complete.
+    if (config.answer && config.submitted == null && !inst.submitted && document.readyState === "loading")
+        document.addEventListener("DOMContentLoaded", function () { if (isSubmitted(config.answer)) paint(); });
+    return inst;
+}
+
+// Draws one state of the diagram into host (replacing what was there).
+function draw(host, config) {
     var model = analyse(config);
     var lang = String(config.lang || "").trim().toLowerCase().slice(0, 2);   // "he", " ar ", "he_il" ...
     if (!TEXTS[lang]) lang = "en";
@@ -698,6 +754,7 @@ var api = {
     version: VERSION,
     analyse: analyse,
     render: render,
+    isSubmitted: isSubmitted,
     texts: TEXTS,
     format: fmt
 };

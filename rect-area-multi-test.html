@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RectArea multi test</title>
+<!--
+  Copyright (c) 2026 Avi Nathan. All rights reserved.
+  No part of this file may be copied, modified or distributed without the written permission of the copyright holder.
+
+  Like a Moodle quiz page: several questions, each with its own mb; the snippets load the library
+  (asynchronously, so the first ones wait in the queue); the answer fields come after the drawing.
+  Read-only fields = the answer was submitted -> the diagram shows its feedback mode.
+-->
+<style>
+  body { margin: 0; padding: 16px; background: #f4f6f8; color: #1f2933; font: 15px/1.45 Arial, Helvetica, sans-serif; }
+  .que { background: #fff; border: 1px solid #d6dbe0; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; }
+  .que h2 { margin: 0 0 6px; font-size: 15px; }
+  .expect { color: #5f6b76; font-size: 13px; margin: 6px 0 0; }
+  .que input { width: 80px; }
+  .que input[readonly] { background: #eee; }
+  #result { font-weight: bold; }
+</style>
+</head>
+<body>
+<p id="result">...</p>
+
+<div class="que"><h2>שאלה 1 (mb = 111111) - עדיין עונים</h2>
+<script>(function(){var c={steps:[[10,0],[0,-6],[-4,0],[0,-3],[-6,0]],hide:[3,4],helper:"divide",answer:"part1-111111,part2-111111",feedback:{helper:"dims",revealHidden:true},lang:"he"};var s=document.currentScript;var w=window;if(w.RectArea){w.RectArea.render(s,c);return;}var q=w.__rectAreaQ=w.__rectAreaQ||[];q.push([s,c]);if(!w.__rectAreaLoading){w.__rectAreaLoading=1;var e=document.createElement("script");e.src="rect-area.js";document.head.appendChild(e);}})();</script>
+<p>שטח: <input id="part1-111111"> היקף: <input id="part2-111111"></p>
+<p class="expect">Expected: no blue edges, slider without sizes.</p>
+</div>
+
+<div class="que"><h2>שאלה 2 (mb = 222222) - נשלחה</h2>
+<script>(function(){var c={steps:[[10,0],[0,-6],[-4,0],[0,-3],[-6,0]],hide:[3,4],helper:"divide",answer:"part1-222222,part2-222222",feedback:{helper:"dims",revealHidden:true,startView:1},lang:"he"};var s=document.currentScript;var w=window;if(w.RectArea){w.RectArea.render(s,c);return;}var q=w.__rectAreaQ=w.__rectAreaQ||[];q.push([s,c]);if(!w.__rectAreaLoading){w.__rectAreaLoading=1;var e=document.createElement("script");e.src="rect-area.js";document.head.appendChild(e);}})();</script>
+<p>שטח: <input id="part1-222222" readonly value="78"> היקף: <input id="part2-222222" readonly value="38"></p>
+<p class="expect">Expected: blue edges with lengths, slider at way 1 with sizes.</p>
+</div>
+
+<div class="que"><h2>שאלה 3 (mb = 333333) - רק חלק 1 נשלח</h2>
+<script>(function(){var c={path:"R7 D6 L2 D1 L6 U4 R1 U3",hide:[3,6],helper:"divide",answer:"part1-333333,part2-333333",feedback:true,lang:"ar"};var s=document.currentScript;var w=window;if(w.RectArea){w.RectArea.render(s,c);return;}var q=w.__rectAreaQ=w.__rectAreaQ||[];q.push([s,c]);if(!w.__rectAreaLoading){w.__rectAreaLoading=1;var e=document.createElement("script");e.src="rect-area.js";document.head.appendChild(e);}})();</script>
+<p>المساحة: <input id="part1-333333" readonly value="51"> المحيط: <input id="part2-333333"></p>
+<p class="expect">Expected: still answering (part 2 is not read-only) - no blue edges.</p>
+</div>
+
+<div class="que"><h2>שאלה 4 (mb = 444444) - נשלחה, ה-id על span שעוטף את השדה</h2>
+<script>(function(){var c={path:"R7 D6 L2 D1 L6 U4 R1 U3",hide:[3,6],helper:"none",answer:"part1-444444",feedback:true};var s=document.currentScript;var w=window;if(w.RectArea){w.RectArea.render(s,c);return;}var q=w.__rectAreaQ=w.__rectAreaQ||[];q.push([s,c]);if(!w.__rectAreaLoading){w.__rectAreaLoading=1;var e=document.createElement("script");e.src="rect-area.js";document.head.appendChild(e);}})();</script>
+<p>Area: <span id="part1-444444"><input readonly value="51"></span></p>
+<p class="expect">Expected: blue edges, slider with sizes (feedback: true adds the slider).</p>
+</div>
+
+<script>
+// Report: how many diagrams were drawn, and which are in feedback mode (blue edges)
+window.addEventListener("load", function () {
+    setTimeout(function () {
+        var boxes = document.querySelectorAll(".ra-box"), out = [];
+        boxes.forEach(function (b, i) {
+            var blue = b.querySelectorAll('line[stroke="#2b4fd8"]').length > 0;
+            var slider = !!b.querySelector("input[type=range]");
+            out.push("Q" + (i + 1) + ": " + (blue ? "feedback" : "answering") + (slider ? " + slider" : ""));
+        });
+        var ids = {};
+        document.querySelectorAll("pattern").forEach(function (p) { ids[p.id] = (ids[p.id] || 0) + 1; });
+        var dup = Object.keys(ids).filter(function (k) { return ids[k] > 1; });
+        document.getElementById("result").textContent = boxes.length + " diagrams. " + out.join(" | ") +
+            (dup.length ? "  DUPLICATE ids: " + dup.join(",") : "  (no duplicate ids)");
+    }, 300);
+});
+</script>
+</body>
+</html>
