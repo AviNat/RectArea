@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RectArea demo</title>
+<!--
+  Copyright (c) 2026 Avi Nathan. All rights reserved.
+  No part of this file may be copied, modified or distributed without the written permission of the copyright holder.
+-->
+<style>
+  :root { --bg:#f4f6f8; --card:#fff; --ink:#1f2933; --muted:#5f6b76; --line:#d6dbe0; --accent:#2f6fb0; --bad:#b3261e; --good:#1e7d3a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 Arial, Helvetica, sans-serif; }
+  header { padding: 14px 20px; background: #24313d; color: #fff; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 2px 0 0; color: #c9d3dc; font-size: 13px; }
+  main { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 16px; padding: 16px 20px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 8px; font-size: 15px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  label { display: block; margin: 8px 0 3px; font-weight: bold; font-size: 13px; }
+  label.inline { display: inline-flex; gap: 6px; align-items: center; font-weight: normal; margin-right: 14px; }
+  select, input[type=text], input[type=number], textarea { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; font: inherit; background: #fff; color: inherit; }
+  textarea { font-family: Consolas, "Courier New", monospace; font-size: 12.5px; resize: vertical; }
+  button { padding: 6px 12px; border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 5px; font: inherit; cursor: pointer; }
+  button.ghost { background: #fff; color: var(--accent); }
+  .row { display: flex; gap: 8px; align-items: end; }
+  .row > * { flex: 1; }
+  .vals { font-family: Consolas, monospace; font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .previews { display: flex; flex-wrap: wrap; gap: 16px; }
+  .previews > div { flex: 1 1 340px; min-width: 0; }
+  .previews h3 { margin: 0 0 6px; font-size: 14px; }
+  .info td { padding: 2px 10px 2px 0; vertical-align: top; }
+  .bad { color: var(--bad); }
+  .good { color: var(--good); }
+  .warn { color: #8a5a00; }
+  .snip { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  .snip span { font-weight: bold; font-size: 13px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>RectArea <span id="ver"></span> - area and perimeter of right-angled shapes</h1>
+  <p>Demo page and snippet builder for Moodle Formulas questions. Random values are chosen here the way Formulas chooses them.</p>
+</header>
+<main>
+  <div>
+    <div class="card">
+      <h2>Shape</h2>
+      <label for="tpl">Template</label>
+      <select id="tpl"></select>
+      <div class="row" style="margin-top:8px">
+        <button id="again" type="button">New random values</button>
+      </div>
+      <div class="vals" id="vals"></div>
+      <label for="steps">Steps from (0,0) - snippet text, <code>{name}</code> = Formulas variable</label>
+      <textarea id="steps" rows="3" spellcheck="false"></textarea>
+      <p class="hint" id="stepsHint"></p>
+    </div>
+    <div class="card">
+      <h2>Question</h2>
+      <label for="hide">Hidden edges (edge numbers, e.g. 3,4)</label>
+      <input id="hide" type="text">
+      <label class="inline" style="margin-top:6px"><input id="letters" type="checkbox"> label the hidden edges a, b</label>
+      <label for="helper">Helper while answering</label>
+      <select id="helper">
+        <option value="none">none - drawing only</option>
+        <option value="divide">divide - slider shows the ways, no numbers</option>
+        <option value="dims">dims - slider and the sides of each rectangle</option>
+      </select>
+      <label class="inline" style="margin-top:8px"><input id="fb" type="checkbox" checked> feedback snippet</label>
+      <div class="row" id="fbOpts">
+        <div><label for="fbHelper">Helper in the feedback</label>
+          <select id="fbHelper">
+            <option value="none">none</option>
+            <option value="divide">divide</option>
+            <option value="dims" selected>dims</option>
+          </select></div>
+        <div><label class="inline" style="margin-bottom:8px"><input id="reveal" type="checkbox" checked> hidden edges in blue, with length</label></div>
+      </div>
+      <div class="row">
+        <div><label for="lang">Language</label>
+          <select id="lang"><option value="en">English</option><option value="he">עברית</option><option value="ar">العربية</option></select></div>
+        <div><label for="width">Width (px)</label><input id="width" type="number" value="420" min="240" max="800" step="10"></div>
+      </div>
+      <div style="margin-top:8px">
+        <label class="inline"><input id="grid" type="checkbox"> unit grid</label>
+        <label class="inline"><input id="nums" type="checkbox" checked> edge numbers (preview only)</label>
+      </div>
+      <label for="url">Library address</label>
+      <input id="url" type="text" value="https://avinat.github.io/RectArea/rect-area.js">
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Preview (runs the Moodle snippet)</h2>
+      <div class="previews">
+        <div><h3>Question text</h3><div id="pvQ"></div></div>
+        <div id="pvFWrap"><h3>Feedback</h3><div id="pvF"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Check</h2>
+      <table class="info" id="info"></table>
+    </div>
+    <div class="card">
+      <h2>For Moodle Formulas</h2>
+      <label for="fRand">Random variables</label><textarea id="fRand" rows="5" readonly></textarea>
+      <p class="hint">The answers (area, perimeter) and their feedback are part of the question, not of the drawing. Paste each snippet as one line, in the HTML (source) view of the editor.</p>
+      <div class="snip"><span>Question text snippet</span><button class="ghost" type="button" data-copy="sQ">Copy</button></div>
+      <textarea id="sQ" rows="4" readonly></textarea>
+      <div id="sFWrap">
+        <div class="snip"><span>General feedback snippet</span><button class="ghost" type="button" data-copy="sF">Copy</button></div>
+        <textarea id="sF" rows="4" readonly></textarea>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="rect-area.js"></script>
+<script src="rect-area-templates.js"></script>
+<script>
+(function () {
+"use strict";
+var T = window.RectAreaTemplates, RA = window.RectArea;
+var $ = function (id) { return document.getElementById(id); };
+var vals = {};
+var params = new URLSearchParams(location.search);
+var startView = Number(params.get("view")) || 0;
+
+$("ver").textContent = RA.version;
+T.list.forEach(function (t, i) {
+    var o = document.createElement("option");
+    o.value = i; o.textContent = t.name;
+    $("tpl").appendChild(o);
+});
+var custom = document.createElement("option");
+custom.value = "custom"; custom.textContent = "Custom (type the steps)";
+$("tpl").appendChild(custom);
+
+function tpl() { var v = $("tpl").value; return v === "custom" ? null : T.list[Number(v)]; }
+
+function pickTemplate() {
+    var t = tpl();
+    if (t) {
+        vals = T.randomValues(t);
+        $("steps").value = t.steps;
+        $("steps").readOnly = true;
+        $("hide").value = t.hide.join(",");
+        $("stepsHint").textContent = "Template steps are fixed; choose Custom to type your own.";
+    } else {
+        vals = {};
+        $("steps").readOnly = false;
+        if (!$("steps").value.trim() || $("steps").value.indexOf("{") >= 0) {
+            $("steps").value = "[[7,0],[0,-6],[-2,0],[0,-1],[-6,0],[0,4],[1,0],[0,3]]";
+            $("hide").value = "3,6";
+        }
+        $("stepsHint").textContent = "[[dx,dy],...] or \"R5 D5 L2 D5 L3\". Formulas variables in {name} work too, but have no values here.";
+    }
+    update();
+}
+
+function stepsSource() {
+    var s = $("steps").value.trim();
+    return s.charAt(0) === "[" ? s : JSON.stringify(s);       // a path string is passed as a string
+}
+
+function hideText() {
+    var nums = $("hide").value.split(/[\s,;]+/).filter(Boolean).map(Number).filter(function (n) { return n > 0; });
+    if (!nums.length) return "";
+    if (!$("letters").checked) return "[" + nums.join(",") + "]";
+    return "{" + nums.map(function (n, i) { return n + ":\"" + "abcdefgh".charAt(i) + "\""; }).join(",") + "}";
+}
+
+function cfgText(helper, preview, feedback) {
+    var parts = ["steps:" + stepsSource()];
+    var h = hideText();
+    if (h) parts.push("hide:" + h);
+    if (h && feedback && $("reveal").checked) parts.push("revealHidden:true");
+    if (helper !== "none") parts.push("helper:\"" + helper + "\"");
+    if ($("lang").value !== "en") parts.push("lang:\"" + $("lang").value + "\"");
+    var w = Number($("width").value);
+    if (w && w !== 420) parts.push("width:" + w);
+    if ($("grid").checked) parts.push("grid:true");
+    if (preview && $("nums").checked) parts.push("edgeNumbers:true");
+    if (preview && startView) parts.push("startView:" + startView);     // demo.html?view=2&tpl=1
+    return "{" + parts.join(",") + "}";
+}
+
+// The script body that goes into Moodle: one line, no < > & characters.
+function snippetBody(cfg) {
+    return "(function(){var c=" + cfg + ";var s=document.currentScript;var w=window;" +
+        "if(w.RectArea){w.RectArea.render(s,c);return;}" +
+        "var q=w.__rectAreaQ=w.__rectAreaQ||[];q.push([s,c]);" +
+        "if(!w.__rectAreaLoading){w.__rectAreaLoading=1;var e=document.createElement(\"script\");" +
+        "e.src=" + JSON.stringify($("url").value.trim()) + ";document.head.appendChild(e);}})();";
+}
+function snippet(cfg) { return "<script>" + snippetBody(cfg) + "</" + "script>"; }
+
+function runSnippet(box, body) {
+    box.innerHTML = "";
+    var s = document.createElement("script");
+    s.text = body;
+    box.appendChild(s);
+}
+
+function row(name, value, cls) {
+    var tr = document.createElement("tr"), a = document.createElement("td"), b = document.createElement("td");
+    a.textContent = name; b.textContent = value;
+    if (cls) b.className = cls;
+    tr.appendChild(a); tr.appendChild(b);
+    $("info").appendChild(tr);
+}
+
+function update() {
+    var t = tpl(), helper = $("helper").value, fb = $("fb").checked, fbHelper = $("fbHelper").value;
+    $("vals").textContent = t ? Object.keys(vals).map(function (k) { return k + " = " + vals[k]; }).join(",  ") : "";
+    $("info").innerHTML = "";
+
+    var cfgQ = cfgText(helper, false, false), cfgF = cfgText(fbHelper, false, true);
+    var bad = /[<>&]/.test(snippetBody(cfgQ) + snippetBody(cfgF));
+
+    // Snippets for Moodle (with the {name} placeholders)
+    $("sQ").value = snippet(cfgQ);
+    $("sF").value = snippet(cfgF);
+    ["sFWrap", "pvFWrap", "fbOpts"].forEach(function (id) { $(id).style.display = fb ? "" : "none"; });
+    $("fRand").value = t ? T.formulasText(t) : "(custom shape - write your own)";
+
+    // Preview: fill the values in, as Formulas does, and run the real snippet
+    try {
+        runSnippet($("pvQ"), T.fill(snippetBody(cfgText(helper, true, false)), vals));
+        if (fb) runSnippet($("pvF"), T.fill(snippetBody(cfgText(fbHelper, true, true)), vals));
+    } catch (err) {
+        $("pvQ").textContent = "Snippet error: " + err.message;
+    }
+
+    // Check
+    if (bad) row("Snippet", "contains < > or & - Moodle will break it. Remove them from the steps.", "bad");
+    var model;
+    try {
+        var cfg = Function("return " + T.fill(cfgQ, vals) + ";")();
+        model = RA.analyse(cfg);
+    } catch (err2) {
+        row("Steps", "cannot be read: " + err2.message, "bad");
+        return;
+    }
+    if (!model.ok) { model.errors.forEach(function (m) { row("Error", m, "bad"); }); return; }
+    row("Bounding rectangle", RA.format(model.width) + " × " + RA.format(model.height) + (model.autoClosed ? "   (closing edge added)" : ""));
+    model.warnings.forEach(function (m) { row("Warning", m, "warn"); });
+    row("Edges", model.edges.map(function (e) { return "#" + e.num + " " + (e.axis === "h" ? "↔" : "↕") + " " + RA.format(e.len); }).join("   "));
+    row("Ways to divide", model.ways.length + (model.subtract ? " + big rectangle minus " + model.subtract.holes.length + " missing part(s)" : ""));
+}
+
+$("tpl").addEventListener("change", pickTemplate);
+$("again").addEventListener("click", function () { var t = tpl(); if (t) vals = T.randomValues(t); update(); });
+["steps", "hide", "width", "url"].forEach(function (id) { $(id).addEventListener("input", update); });
+["letters", "helper", "fb", "fbHelper", "reveal", "lang", "grid", "nums"].forEach(function (id) { $(id).addEventListener("change", update); });
+document.querySelectorAll("[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+        var ta = $(b.getAttribute("data-copy"));
+        ta.select();
+        (navigator.clipboard ? navigator.clipboard.writeText(ta.value) : Promise.reject()).catch(function () { document.execCommand("copy"); });
+        b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1200);
+    });
+});
+$("helper").value = "divide";
+if (params.get("tpl")) $("tpl").value = params.get("tpl");
+if (params.get("lang")) $("lang").value = params.get("lang");
+pickTemplate();
+})();
+</script>
+</body>
+</html>
