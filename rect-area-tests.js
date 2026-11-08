@@ -40,6 +40,8 @@ TPL.list.forEach(function (t) {
         if (!m.ok) continue;
         ok(m.warnings.length === 0, label + ": " + m.warnings.join(" "));
         ok(near(m.area, TPL.evalExpr(t.area, vals)), label + ": area " + m.area + " != formula " + TPL.evalExpr(t.area, vals));
+        var per = m.edges.reduce(function (s, e) { return s + e.len; }, 0);
+        ok(near(per, TPL.evalExpr(t.perimeter, vals)), label + ": perimeter " + per + " != formula " + TPL.evalExpr(t.perimeter, vals));
         checkWays(m, label);
     }
 });

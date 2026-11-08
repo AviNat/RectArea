@@ -45,7 +45,7 @@ The rectangles get new letters in every way: A, B in the first way, C, D in the 
 
 ## In Moodle Formulas
 
-1. Put the random variables in Formulas. The answers and their feedback are your own.
+1. Put the random variables and the global variables in Formulas. The demo gives both for every template. `A` is the area and `P` the perimeter. Use them as the answers of the parts; their feedback is your own.
 2. Paste the question snippet into the question text, in the HTML (source) view, as **one line**.
 3. To show the drawing again in the feedback, for example with `helper:"dims"` and `revealHidden:true`, paste the feedback snippet where the feedback should appear.
 
@@ -57,6 +57,7 @@ What the snippet looks like:
 
 - Formulas replaces `{W}` and the other placeholders with the random values. JavaScript then works out expressions such as `{ch}-{H}`.
 - The script has no `<`, `>` or `&` characters, because Moodle escapes them, and no line breaks, because Moodle turns them into `<br />`.
+- Language from Moodle: the demo's default "Moodle multilang" writes `lang:<span class="multilang" lang="he">"he"</span><span class="multilang" lang="ar">"ar"</span>`. The multilang filter keeps only the student's span, so the script gets `lang:"he"` or `lang:"ar"`. These spans are the only `<` `>` allowed in the snippet, and the filter must be on.
 - The library is a plain script with no `define()`, so Moodle's RequireJS does not complain about it.
 - The drawing appears right where the script is.
 

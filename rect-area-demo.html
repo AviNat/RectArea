@@ -82,7 +82,12 @@
       </div>
       <div class="row">
         <div><label for="lang">Language</label>
-          <select id="lang"><option value="en">English</option><option value="he">עברית</option><option value="ar">العربية</option></select></div>
+          <select id="lang">
+            <option value="multi" selected>Moodle multilang (he / ar)</option>
+            <option value="en">English</option><option value="he">עברית</option><option value="ar">العربية</option>
+          </select></div>
+        <div id="pvLangWrap"><label for="pvLang">Preview as</label>
+          <select id="pvLang"><option value="he">עברית</option><option value="ar">العربية</option></select></div>
         <div><label for="width">Width (px)</label><input id="width" type="number" value="420" min="240" max="800" step="10"></div>
       </div>
       <div style="margin-top:8px">
@@ -108,8 +113,11 @@
     </div>
     <div class="card">
       <h2>For Moodle Formulas</h2>
-      <label for="fRand">Random variables</label><textarea id="fRand" rows="5" readonly></textarea>
-      <p class="hint">The answers (area, perimeter) and their feedback are part of the question, not of the drawing. Paste each snippet as one line, in the HTML (source) view of the editor.</p>
+      <div class="row">
+        <div><label for="fRand">Random variables</label><textarea id="fRand" rows="6" readonly></textarea></div>
+        <div><label for="fGlob">Global variables (A = area, P = perimeter)</label><textarea id="fGlob" rows="6" readonly></textarea></div>
+      </div>
+      <p class="hint">Use A and P as the answers of the parts; their feedback is part of the question. Paste each snippet as one line, in the HTML (source) view of the editor.</p>
       <div class="snip"><span>Question text snippet</span><button class="ghost" type="button" data-copy="sQ">Copy</button></div>
       <textarea id="sQ" rows="4" readonly></textarea>
       <div id="sFWrap">
@@ -181,7 +189,9 @@ function cfgText(helper, preview, feedback) {
     if (h) parts.push("hide:" + h);
     if (h && feedback && $("reveal").checked) parts.push("revealHidden:true");
     if (helper !== "none") parts.push("helper:\"" + helper + "\"");
-    if ($("lang").value !== "en") parts.push("lang:\"" + $("lang").value + "\"");
+    var lang = $("lang").value;
+    if (lang === "multi") parts.push("lang:" + (preview ? "\"" + $("pvLang").value + "\"" : MULTILANG));
+    else if (lang !== "en") parts.push("lang:\"" + lang + "\"");
     var w = Number($("width").value);
     if (w && w !== 420) parts.push("width:" + w);
     if ($("grid").checked) parts.push("grid:true");
@@ -190,7 +200,11 @@ function cfgText(helper, preview, feedback) {
     return "{" + parts.join(",") + "}";
 }
 
-// The script body that goes into Moodle: one line, no < > & characters.
+// Moodle's multilang filter keeps only the span of the student's language, so the script gets lang:"he" or lang:"ar".
+// These spans are the only < > in the snippet; the filter removes them before the page reaches the browser.
+var MULTILANG = '<span class="multilang" lang="he">"he"</span><span class="multilang" lang="ar">"ar"</span>';
+
+// The script body that goes into Moodle: one line, no < > & characters (except the multilang spans).
 function snippetBody(cfg) {
     return "(function(){var c=" + cfg + ";var s=document.currentScript;var w=window;" +
         "if(w.RectArea){w.RectArea.render(s,c);return;}" +
@@ -221,13 +235,22 @@ function update() {
     $("info").innerHTML = "";
 
     var cfgQ = cfgText(helper, false, false), cfgF = cfgText(fbHelper, false, true);
-    var bad = /[<>&]/.test(snippetBody(cfgQ) + snippetBody(cfgF));
+    var bad = /[<>&]/.test((snippetBody(cfgQ) + snippetBody(cfgF)).split(MULTILANG).join(""));
 
     // Snippets for Moodle (with the {name} placeholders)
     $("sQ").value = snippet(cfgQ);
     $("sF").value = snippet(cfgF);
     ["sFWrap", "pvFWrap", "fbOpts"].forEach(function (id) { $(id).style.display = fb ? "" : "none"; });
-    $("fRand").value = t ? T.formulasText(t) : "(custom shape - write your own)";
+    $("pvLangWrap").style.display = $("lang").value === "multi" ? "" : "none";
+    var custom = !t, fixed = custom && $("steps").value.indexOf("{") < 0;
+    if (t) {
+        var ft = T.formulasText(t);
+        $("fRand").value = ft.random;
+        $("fGlob").value = ft.global;
+    } else {
+        $("fRand").value = fixed ? "(none - the shape has fixed numbers)" : "(custom shape - write your own)";
+        $("fGlob").value = "A = ...;\nP = ...;";
+    }
 
     // Preview: fill the values in, as Formulas does, and run the real snippet
     try {
@@ -241,13 +264,21 @@ function update() {
     if (bad) row("Snippet", "contains < > or & - Moodle will break it. Remove them from the steps.", "bad");
     var model;
     try {
-        var cfg = Function("return " + T.fill(cfgQ, vals) + ";")();
+        var cfg = Function("return " + T.fill(cfgText(helper, true, false), vals) + ";")();
         model = RA.analyse(cfg);
     } catch (err2) {
         row("Steps", "cannot be read: " + err2.message, "bad");
         return;
     }
     if (!model.ok) { model.errors.forEach(function (m) { row("Error", m, "bad"); }); return; }
+    var per = model.edges.reduce(function (s, e) { return s + e.len; }, 0);
+    if (fixed) $("fGlob").value = "A = " + RA.format(model.area) + ";\nP = " + RA.format(per) + ";";
+    if (t) {
+        var fa = T.evalExpr(t.area, vals), fp = T.evalExpr(t.perimeter, vals);
+        var same = Math.abs(fa - model.area) < 1e-6 && Math.abs(fp - per) < 1e-6;
+        row("A, P", "A = " + RA.format(fa) + ", P = " + RA.format(fp) + (same ? "   ✓ match the drawing" : "   ✗ drawing gives A = " +
+            RA.format(model.area) + ", P = " + RA.format(per)), same ? "good" : "bad");
+    }
     row("Bounding rectangle", RA.format(model.width) + " × " + RA.format(model.height) + (model.autoClosed ? "   (closing edge added)" : ""));
     model.warnings.forEach(function (m) { row("Warning", m, "warn"); });
     row("Edges", model.edges.map(function (e) { return "#" + e.num + " " + (e.axis === "h" ? "↔" : "↕") + " " + RA.format(e.len); }).join("   "));
@@ -257,7 +288,7 @@ function update() {
 $("tpl").addEventListener("change", pickTemplate);
 $("again").addEventListener("click", function () { var t = tpl(); if (t) vals = T.randomValues(t); update(); });
 ["steps", "hide", "width", "url"].forEach(function (id) { $(id).addEventListener("input", update); });
-["letters", "helper", "fb", "fbHelper", "reveal", "lang", "grid", "nums"].forEach(function (id) { $(id).addEventListener("change", update); });
+["letters", "helper", "fb", "fbHelper", "reveal", "lang", "pvLang", "grid", "nums"].forEach(function (id) { $(id).addEventListener("change", update); });
 document.querySelectorAll("[data-copy]").forEach(function (b) {
     b.addEventListener("click", function () {
         var ta = $(b.getAttribute("data-copy"));

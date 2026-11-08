@@ -8,7 +8,8 @@
  *   vars:   random variables, each an independent range [low, high] (Formulas: {low:high+1})
  *           chosen so that every combination gives a valid shape with sides 8-12.
  *   steps:  the snippet text, with {name} placeholders that Formulas fills in.
- *   area:   used only by the tests, to check the divisions (the question calculates its own answers).
+ *   area, perimeter: Formulas expressions for the global variables A and P (the answers);
+ *           the tests check them against the drawing.
  *   hide:   suggested edges to hide (one horizontal, one vertical).
  */
 (function (root) {
@@ -20,6 +21,7 @@ var LIST = [
         vars: { W: [8, 12], H: [8, 12], cw: [2, 5], ch: [2, 5] },
         steps: "[[{W},0],[0,{ch}-{H}],[-{cw},0],[0,-{ch}],[{cw}-{W},0]]",
         area: "W*H - cw*ch",
+        perimeter: "2*(W+H)",
         hide: [3, 4]
     },
     {
@@ -27,6 +29,7 @@ var LIST = [
         vars: { W: [9, 12], H: [8, 12], a: [2, 3], nw: [2, 3], nd: [2, 5] },
         steps: "[[{a},0],[0,-{nd}],[{nw},0],[0,{nd}],[{W}-{a}-{nw},0],[0,-{H}],[-{W},0]]",
         area: "W*H - nw*nd",
+        perimeter: "2*(W+H) + 2*nd",
         hide: [3, 6]
     },
     {
@@ -34,6 +37,7 @@ var LIST = [
         vars: { W: [8, 12], H: [8, 12], t: [2, 4], a: [2, 3], s: [2, 3] },
         steps: "[[{W},0],[0,-{t}],[{a}+{s}-{W},0],[0,{t}-{H}],[-{s},0],[0,{H}-{t}],[-{a},0]]",
         area: "W*t + s*(H-t)",
+        perimeter: "2*(W+H)",
         hide: [5, 6]
     },
     {
@@ -41,6 +45,7 @@ var LIST = [
         vars: { W: [8, 12], H: [8, 12], a: [2, 3], c: [2, 3], b: [2, 3], d: [2, 3] },
         steps: "[[{a},0],[0,-{b}],[{c},0],[0,-{d}],[{W}-{a}-{c},0],[0,{b}+{d}-{H}],[-{W},0]]",
         area: "W*H - (W-a)*b - (W-a-c)*d",
+        perimeter: "2*(W+H)",
         hide: [3, 4]
     },
     {
@@ -48,6 +53,7 @@ var LIST = [
         vars: { W: [8, 12], H: [8, 12], p: [2, 3], q: [2, 3], r: [2, 3], u: [2, 3] },
         steps: "[[{W}-{p},0],[0,-{q}],[{p},0],[0,{q}-{H}],[{r}-{W},0],[0,{u}],[-{r},0]]",
         area: "W*H - p*q - r*u",
+        perimeter: "2*(W+H)",
         hide: [1, 4]
     }
 ];
@@ -77,9 +83,12 @@ function steps(t, vals) {
     return Function("return " + fill(t.steps, vals) + ";")();
 }
 
-// Text for the Formulas "Random variables" box.
+// Text for the Formulas "Random variables" and "Global variables" boxes (A = area, P = perimeter).
 function formulasText(t) {
-    return Object.keys(t.vars).map(function (k) { return k + " = {" + t.vars[k][0] + ":" + (t.vars[k][1] + 1) + "};"; }).join("\n");
+    return {
+        random: Object.keys(t.vars).map(function (k) { return k + " = {" + t.vars[k][0] + ":" + (t.vars[k][1] + 1) + "};"; }).join("\n"),
+        global: "A = " + t.area + ";\nP = " + t.perimeter + ";"
+    };
 }
 
 var api = { list: LIST, randomValues: randomValues, fill: fill, evalExpr: evalExpr, steps: steps, formulasText: formulasText };

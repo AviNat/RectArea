@@ -502,7 +502,8 @@ function render(target, config) {
     addStyle();
     var host = resolveTarget(target);
     var model = analyse(config);
-    var lang = TEXTS[config.lang] ? config.lang : "en";
+    var lang = String(config.lang || "").trim().toLowerCase().slice(0, 2);   // "he", " ar ", "he_il" ...
+    if (!TEXTS[lang]) lang = "en";
     var T = {};
     Object.keys(TEXTS.en).forEach(function (k) { T[k] = TEXTS.en[k]; });
     Object.keys(TEXTS[lang]).forEach(function (k) { T[k] = TEXTS[lang][k]; });   // also language-only keys (rects2)
