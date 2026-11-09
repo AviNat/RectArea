@@ -37,11 +37,13 @@ The library stops with a clear message when a step is diagonal, a step has lengt
 | `grid` | `false` | Unit grid behind the shape. |
 | `startView` | `0` | Slider position at the start. 0 = the shape only. |
 | `maxWays` | `8` | Most ways to divide shown. "Big rectangle minus the missing parts" is always added after them. |
+| `allWays` | `false` | `true` also shows ways with a cut that is not needed (two pieces that together make one rectangle). |
 | `sizeRange` | `[8,12]` | Range for the console warning. `null` turns it off. |
 
 How the slider's ways are found:
 - Vertical strips and horizontal strips.
 - Every combination of cuts from the inner (270°) corners. Each cut continues one edge of the corner until it meets the border or an earlier cut.
+- Ways with a cut that is not needed are removed: two pieces with a whole side in common would be one rectangle. `allWays:true` keeps them.
 - Ways that repeat are removed. The rest are sorted with the fewest rectangles first.
 - The last position shows the big rectangle minus the missing parts.
 

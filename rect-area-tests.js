@@ -23,6 +23,10 @@ function checkWays(m, label) {
                 var a = w.rects[i], b = w.rects[j];
                 var ox = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0), oy = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
                 ok(!(ox > 1e-9 && oy > 1e-9), label + ": way " + (k + 1) + " rects overlap");
+                // no unneeded cut: two pieces with a whole common side would be one rectangle
+                var sameX = near(a.x0, b.x0) && near(a.x1, b.x1) && (near(a.y1, b.y0) || near(b.y1, a.y0));
+                var sameY = near(a.y0, b.y0) && near(a.y1, b.y1) && (near(a.x1, b.x0) || near(b.x1, a.x0));
+                ok(!(sameX || sameY), label + ": way " + (k + 1) + " has a cut that is not needed");
             }
     });
     if (m.subtract) {

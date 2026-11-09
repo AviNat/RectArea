@@ -1,9 +1,9 @@
-/*
+﻿/*
  * Copyright (c) 2026 Avi Nathan. All rights reserved.
  * No part of this file may be copied, modified or distributed without the written permission of the copyright holder.
  */
 /*
- * RectArea (version 1.4.0 - RectArea.version)
+ * RectArea (version 1.5.0 - RectArea.version)
  * Drawing of right-angled polygons for area / perimeter questions in Moodle Formulas.
  * Presentation only: the question calculates and checks the answers and gives their feedback.
  *
@@ -43,6 +43,7 @@
  *   grid:      false  unit grid behind the shape
  *   startView: 0      slider position at start (0 = shape only)
  *   maxWays:   8      most ways to divide shown (plus "big rectangle minus missing parts")
+ *   allWays:   false  true = also ways where two pieces together are a rectangle (a cut that is not needed)
  *   sizeRange: [8,12] warning (console) when the bounding rectangle is outside it; null = off
  *   edgeNumbers: false  small edge numbers (for the teacher while building)
  *
@@ -54,7 +55,7 @@
 (function (root) {
 "use strict";
 
-var VERSION = "1.4.0";
+var VERSION = "1.5.0";
 var EPS = 1e-7;
 var MINUS = "−";
 var PALETTE = ["#4e79a7", "#f28e2b", "#59a14f", "#b07aa1", "#76b7b2", "#edc948", "#e15759", "#9c755f"];
@@ -278,7 +279,7 @@ function analyse(config) {
     if (model.errors.length) return model;
 
     model.grid = buildGrid(model);
-    model.ways = findWays(model, config.maxWays || 8);
+    model.ways = findWays(model, config.maxWays || 8, !!config.allWays);
     model.subtract = findSubtract(model);
     model.ok = true;
     return model;
@@ -426,10 +427,23 @@ function sortRects(rects) {
     return rects.sort(function (a, b) { return (b.y1 - a.y1) || (a.x0 - b.x0); });
 }
 
-function findWays(model, maxWays) {
+// Two rectangles with a whole common side make one rectangle: the cut between them is not needed.
+function mergeable(a, b) {
+    if (a.j0 === b.j0 && a.j1 === b.j1 && (a.i1 === b.i0 || b.i1 === a.i0)) return true;
+    if (a.i0 === b.i0 && a.i1 === b.i1 && (a.j1 === b.j0 || b.j1 === a.j0)) return true;
+    return false;
+}
+function hasExtraCut(rects) {
+    for (var i = 0; i < rects.length; i++)
+        for (var j = i + 1; j < rects.length; j++) if (mergeable(rects[i], rects[j])) return true;
+    return false;
+}
+
+function findWays(model, maxWays, allWays) {
     var g = model.grid, seen = {}, ways = [];
     function add(rects) {
         if (!rects) return;
+        if (!allWays && hasExtraCut(rects)) return;    // a rectangle cut into smaller rectangles
         sortRects(rects);
         var key = rects.map(function (r) { return [r.i0, r.i1, r.j0, r.j1].join(","); }).sort().join("|");
         if (seen[key]) return;
